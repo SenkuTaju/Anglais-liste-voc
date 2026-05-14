@@ -148,12 +148,12 @@
   .card-back .card-label { color: #4fffb077; }
 
   .card-word {
-    font-size: 28px; font-weight: 800; line-height: 1.1;
+    font-size: 24px; font-weight: 800; line-height: 1.1;
     color: var(--text);
   }
 
   .card-translation {
-    font-size: 20px; font-weight: 700; color: var(--accent);
+    font-size: 26px; font-weight: 700; color: var(--accent);
     line-height: 1.2; margin-bottom: 8px;
   }
 
@@ -234,7 +234,7 @@
     align-items: center; justify-content: center;
   }
 
-  .qcm-word { font-size: 28px; font-weight: 800; }
+  .qcm-word { font-size: 24px; font-weight: 800; }
 
   .qcm-options { display: flex; flex-direction: column; gap: 10px; }
 
@@ -352,17 +352,16 @@
 
 <div class="main-content" id="main-content">
 
-  <!-- FLASHCARD MODE -->
   <div class="card-area" id="card-area" onclick="flipCard()">
     <div class="card" id="card">
       <div class="card-face card-front">
-        <div class="card-label">🇬🇧 English</div>
-        <div class="card-word" id="word-en">—</div>
-        <div class="flip-hint">Tap to reveal · Swipe or use buttons</div>
+        <div class="card-label">🇫🇷 Français</div>
+        <div class="card-word" id="word-fr">—</div>
+        <div class="flip-hint">Appuyez pour révéler · Glissez ou utilisez les boutons</div>
       </div>
       <div class="card-face card-back">
-        <div class="card-label">🇫🇷 Français</div>
-        <div class="card-translation" id="word-fr">—</div>
+        <div class="card-label">🇬🇧 English</div>
+        <div class="card-translation" id="word-en">—</div>
         <div class="card-note" id="word-note"></div>
       </div>
     </div>
@@ -372,14 +371,13 @@
 
   <div class="controls" id="flash-controls">
     <button class="btn btn-fail" onclick="answer(false)">✗ Pas su</button>
-    <button class="btn btn-skip" onclick="nextCard()">→ Skip</button>
+    <button class="btn btn-skip" onclick="nextCard()">→ Passer</button>
     <button class="btn btn-pass" onclick="answer(true)">✓ Su !</button>
   </div>
 
-  <!-- QCM MODE -->
   <div class="qcm-area" id="qcm-area" style="display:none">
     <div class="qcm-question">
-      <div class="card-label" style="margin-bottom:12px">🇬🇧 Que signifie…</div>
+      <div class="card-label" style="margin-bottom:12px">🇫🇷 Comment dit-on…</div>
       <div class="qcm-word" id="qcm-word">—</div>
     </div>
     <div class="qcm-options" id="qcm-options"></div>
@@ -393,7 +391,6 @@
   <div class="stat-box yellow"><div class="stat-val" id="stat-left">0</div><div class="stat-lbl">Restants</div></div>
 </div>
 
-<!-- END SCREEN -->
 <div class="end-screen" id="end-screen">
   <div class="end-emoji" id="end-emoji">🎉</div>
   <div class="end-title">Session terminée !</div>
@@ -616,8 +613,8 @@ function showCard() {
     document.getElementById('card-area').style.display = 'block';
     document.getElementById('flash-controls').style.display = 'flex';
     document.getElementById('qcm-area').style.display = 'none';
-    document.getElementById('word-en').textContent = w.en;
     document.getElementById('word-fr').textContent = w.fr;
+    document.getElementById('word-en').textContent = w.en;
     document.getElementById('word-note').textContent = w.note || '';
     const card = document.getElementById('card');
     card.classList.remove('flipped');
@@ -662,11 +659,11 @@ function updateStats() {
 
 // ─── QCM ────────────────────────────────────────────────────────
 function showQCM(w) {
-  document.getElementById('qcm-word').textContent = w.en;
+  document.getElementById('qcm-word').textContent = w.fr;
   qcmAnswered = false;
 
   // Pick 3 wrong options
-  const others = ALL_WORDS.filter(x => x.en !== w.en);
+  const others = ALL_WORDS.filter(x => x.fr !== w.fr);
   shuffle(others);
   const choices = shuffle([w, ...others.slice(0, 3)]);
 
@@ -675,7 +672,7 @@ function showQCM(w) {
   choices.forEach(c => {
     const btn = document.createElement('button');
     btn.className = 'qcm-opt';
-    btn.textContent = c.fr;
+    btn.textContent = c.en;
     btn.onclick = () => handleQCM(btn, c, w);
     container.appendChild(btn);
   });
@@ -687,14 +684,14 @@ function handleQCM(btn, chosen, correct) {
   const btns = document.querySelectorAll('.qcm-opt');
   btns.forEach(b => { b.disabled = true; });
 
-  if (chosen.en === correct.en) {
+  if (chosen.fr === correct.fr) {
     btn.classList.add('correct');
     good++;
   } else {
     btn.classList.add('wrong');
     bad++;
     wrong.push(correct);
-    btns.forEach(b => { if (b.textContent === correct.fr) b.classList.add('reveal'); });
+    btns.forEach(b => { if (b.textContent === correct.en) b.classList.add('reveal'); });
   }
   updateStats();
   setTimeout(() => { current++; showCard(); }, 1000);
@@ -721,13 +718,13 @@ function showEnd() {
 const cardArea = document.getElementById('card-area');
 
 cardArea.addEventListener('touchstart', e => {
-  touchStartX = e.touches[0].clientX;
-  touchStartY = e.touches[0].clientY;
+  touchStartX = e.touches.clientX;
+  touchStartY = e.touches.clientY;
 }, { passive: true });
 
 cardArea.addEventListener('touchend', e => {
-  const dx = e.changedTouches[0].clientX - touchStartX;
-  const dy = e.changedTouches[0].clientY - touchStartY;
+  const dx = e.changedTouches.clientX - touchStartX;
+  const dy = e.changedTouches.clientY - touchStartY;
   if (Math.abs(dx) < 40 || Math.abs(dy) > Math.abs(dx)) return;
 
   if (!flipped) { flipCard(); return; }
