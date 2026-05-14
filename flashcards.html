@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Vocab Ch.6 — Flashcards</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e10;
+    --surface: #1a1a1f;
+    --card-front: #1e1e26;
+    --card-back: #12201a;
+    --accent: #4fffb0;
+    --accent2: #ff6b6b;
+    --accent3: #ffd166;
+    --text: #f0f0f0;
+    --muted: #6b6b7a;
+    --border: #2e2e3a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+  }
+
+  /* Background grain */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0;
+  }
+
+  header {
+    width: 100%; max-width: 480px;
+    padding: 24px 20px 8px;
+    position: relative; z-index: 1;
+  }
+
+  .title {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  h1 {
+    font-size: 22px; font-weight: 800; line-height: 1.1;
+  }
+
+  /* Mode switcher */
+  .modes {
+    display: flex; gap: 8px;
+    padding: 16px 20px 0;
+    width: 100%; max-width: 480px;
+    position: relative; z-index: 1;
+  }
+
+  .mode-btn {
+    flex: 1; padding: 8px 4px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-family: 'Syne', sans-serif;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    border-radius: 8px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .mode-btn.active {
+    background: var(--accent); color: #000;
+    border-color: var(--accent);
+  }
+
+  /* Progress bar */
+  .progress-wrap {
+    width: 100%; max-width: 480px;
+    padding: 16px 20px 0;
+    position: relative; z-index: 1;
+  }
+
+  .progress-info {
+    display: flex; justify-content: space-between;
+    font-size: 11px; color: var(--muted);
+    margin-bottom: 6px; font-family: 'DM Mono', monospace;
+  }
+
+  .progress-bar {
+    height: 3px; background: var(--border); border-radius: 99px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; background: var(--accent);
+    border-radius: 99px;
+    transition: width 0.4s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* FLASHCARD */
+  .card-area {
+    width: 100%; max-width: 480px;
+    padding: 20px 20px 0;
+    position: relative; z-index: 1;
+    perspective: 1000px;
+  }
+
+  .card {
+    width: 100%; min-height: 220px;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.5s cubic-bezier(.4,0,.2,1);
+    cursor: pointer;
+    border-radius: 16px;
+  }
+
+  .card.flipped { transform: rotateY(180deg); }
+
+  .card-face {
+    position: absolute; inset: 0;
+    border-radius: 16px;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    padding: 28px 24px;
+    text-align: center;
+    border: 1px solid var(--border);
+  }
+
+  .card-front { background: var(--card-front); }
+  .card-back {
+    background: var(--card-back);
+    transform: rotateY(180deg);
+    border-color: #2a3d32;
+  }
+
+  .card-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .card-back .card-label { color: #4fffb077; }
+
+  .card-word {
+    font-size: 28px; font-weight: 800; line-height: 1.1;
+    color: var(--text);
+  }
+
+  .card-translation {
+    font-size: 20px; font-weight: 700; color: var(--accent);
+    line-height: 1.2; margin-bottom: 8px;
+  }
+
+  .card-note {
+    font-size: 12px; font-family: 'DM Mono', monospace;
+    color: var(--muted); margin-top: 10px;
+    font-style: italic;
+  }
+
+  .flip-hint {
+    font-size: 10px; color: var(--muted);
+    margin-top: 14px; letter-spacing: 0.1em;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* Swipe feedback */
+  .swipe-feedback {
+    position: absolute; top: 16px;
+    font-size: 14px; font-weight: 800; letter-spacing: 0.15em;
+    text-transform: uppercase; opacity: 0;
+    pointer-events: none; transition: opacity 0.15s;
+    padding: 6px 14px; border-radius: 8px;
+  }
+  .swipe-feedback.left { left: 16px; color: var(--accent2); border: 2px solid var(--accent2); }
+  .swipe-feedback.right { right: 16px; color: var(--accent); border: 2px solid var(--accent); }
+  .swipe-feedback.show { opacity: 1; }
+
+  /* Controls */
+  .controls {
+    display: flex; gap: 10px;
+    width: 100%; max-width: 480px;
+    padding: 16px 20px 0;
+    position: relative; z-index: 1;
+  }
+
+  .btn {
+    flex: 1; padding: 14px 8px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+
+  .btn-fail {
+    background: #1a1014; color: var(--accent2); border-color: #3a1a1a;
+  }
+  .btn-fail:active { background: #3a1a1a; transform: scale(0.97); }
+
+  .btn-pass {
+    background: #0e1a14; color: var(--accent); border-color: #1a3a26;
+  }
+  .btn-pass:active { background: #1a3a26; transform: scale(0.97); }
+
+  .btn-skip {
+    flex: 0.6; background: var(--surface); color: var(--muted);
+    font-size: 12px;
+  }
+  .btn-skip:active { background: var(--border); }
+
+  /* QCM mode */
+  .qcm-area {
+    width: 100%; max-width: 480px;
+    padding: 20px 20px 0;
+    position: relative; z-index: 1;
+  }
+
+  .qcm-question {
+    background: var(--card-front);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 24px;
+    text-align: center;
+    margin-bottom: 14px;
+    min-height: 120px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+
+  .qcm-word { font-size: 28px; font-weight: 800; }
+
+  .qcm-options { display: flex; flex-direction: column; gap: 10px; }
+
+  .qcm-opt {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer; text-align: left;
+    transition: all 0.15s;
+  }
+  .qcm-opt:active { transform: scale(0.98); }
+  .qcm-opt.correct { background: #0e2018; border-color: var(--accent); color: var(--accent); }
+  .qcm-opt.wrong { background: #1a0e0e; border-color: var(--accent2); color: var(--accent2); }
+  .qcm-opt.reveal { background: #0e2018; border-color: var(--accent); color: var(--accent); }
+  .qcm-opt:disabled { cursor: default; }
+
+  /* Stats */
+  .stats {
+    display: flex; gap: 10px;
+    width: 100%; max-width: 480px;
+    padding: 14px 20px 0;
+    position: relative; z-index: 1;
+  }
+
+  .stat-box {
+    flex: 1; background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px;
+    text-align: center;
+  }
+
+  .stat-val { font-size: 20px; font-weight: 800; }
+  .stat-lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.15em; margin-top: 2px; }
+
+  .stat-box.green .stat-val { color: var(--accent); }
+  .stat-box.red .stat-val { color: var(--accent2); }
+  .stat-box.yellow .stat-val { color: var(--accent3); }
+
+  /* End screen */
+  .end-screen {
+    display: none;
+    width: 100%; max-width: 480px;
+    padding: 40px 20px;
+    text-align: center;
+    position: relative; z-index: 1;
+    flex-direction: column; align-items: center;
+  }
+
+  .end-screen.show { display: flex; }
+
+  .end-emoji { font-size: 64px; margin-bottom: 16px; }
+  .end-title { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+  .end-sub { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+  .end-score { font-size: 48px; font-weight: 800; color: var(--accent); }
+  .end-score-lbl { font-size: 12px; color: var(--muted); margin-bottom: 28px; }
+
+  .btn-restart {
+    background: var(--accent); color: #000;
+    border: none; border-radius: 12px;
+    padding: 16px 32px;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px; font-weight: 800;
+    cursor: pointer; letter-spacing: 0.05em;
+    transition: transform 0.15s;
+  }
+  .btn-restart:active { transform: scale(0.97); }
+
+  .btn-retry-wrong {
+    background: var(--surface); color: var(--accent2);
+    border: 1px solid var(--accent2); border-radius: 12px;
+    padding: 14px 28px; margin-top: 10px;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px; font-weight: 700;
+    cursor: pointer;
+  }
+
+  /* Swipe animation */
+  .card-area.swipe-left { animation: swipeLeft 0.3s ease forwards; }
+  .card-area.swipe-right { animation: swipeRight 0.3s ease forwards; }
+
+  @keyframes swipeLeft {
+    to { transform: translateX(-60px); opacity: 0; }
+  }
+  @keyframes swipeRight {
+    to { transform: translateX(60px); opacity: 0; }
+  }
+
+  .main-content { display: flex; flex-direction: column; align-items: center; width: 100%; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title">Chapter 6 · Vocabulary Help</div>
+  <h1>Flashcards</h1>
+</header>
+
+<div class="modes">
+  <button class="mode-btn active" onclick="setMode('flash')">🃏 Flip</button>
+  <button class="mode-btn" onclick="setMode('qcm')">🎯 QCM</button>
+  <button class="mode-btn" onclick="setMode('hard')">🔥 Raté seulement</button>
+</div>
+
+<div class="progress-wrap">
+  <div class="progress-info">
+    <span id="prog-text">1 / 100</span>
+    <span id="prog-pct">0%</span>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+</div>
+
+<div class="main-content" id="main-content">
+
+  <!-- FLASHCARD MODE -->
+  <div class="card-area" id="card-area" onclick="flipCard()">
+    <div class="card" id="card">
+      <div class="card-face card-front">
+        <div class="card-label">🇬🇧 English</div>
+        <div class="card-word" id="word-en">—</div>
+        <div class="flip-hint">Tap to reveal · Swipe or use buttons</div>
+      </div>
+      <div class="card-face card-back">
+        <div class="card-label">🇫🇷 Français</div>
+        <div class="card-translation" id="word-fr">—</div>
+        <div class="card-note" id="word-note"></div>
+      </div>
+    </div>
+    <div class="swipe-feedback left" id="fb-left">✗ Raté</div>
+    <div class="swipe-feedback right" id="fb-right">✓ Su</div>
+  </div>
+
+  <div class="controls" id="flash-controls">
+    <button class="btn btn-fail" onclick="answer(false)">✗ Pas su</button>
+    <button class="btn btn-skip" onclick="nextCard()">→ Skip</button>
+    <button class="btn btn-pass" onclick="answer(true)">✓ Su !</button>
+  </div>
+
+  <!-- QCM MODE -->
+  <div class="qcm-area" id="qcm-area" style="display:none">
+    <div class="qcm-question">
+      <div class="card-label" style="margin-bottom:12px">🇬🇧 Que signifie…</div>
+      <div class="qcm-word" id="qcm-word">—</div>
+    </div>
+    <div class="qcm-options" id="qcm-options"></div>
+  </div>
+
+</div>
+
+<div class="stats">
+  <div class="stat-box green"><div class="stat-val" id="stat-good">0</div><div class="stat-lbl">Su ✓</div></div>
+  <div class="stat-box red"><div class="stat-val" id="stat-bad">0</div><div class="stat-lbl">Raté ✗</div></div>
+  <div class="stat-box yellow"><div class="stat-val" id="stat-left">0</div><div class="stat-lbl">Restants</div></div>
+</div>
+
+<!-- END SCREEN -->
+<div class="end-screen" id="end-screen">
+  <div class="end-emoji" id="end-emoji">🎉</div>
+  <div class="end-title">Session terminée !</div>
+  <div class="end-sub" id="end-sub">Voilà le résultat</div>
+  <div class="end-score" id="end-score">0%</div>
+  <div class="end-score-lbl">de réussite</div>
+  <button class="btn-restart" onclick="restart(false)">↺ Recommencer tout</button>
+  <button class="btn-retry-wrong" id="btn-retry-wrong" onclick="restart(true)" style="display:none">↺ Revoir les ratés</button>
+</div>
+
+<script>
+// ─── VOCAB DATA ───────────────────────────────────────────────────
+const ALL_WORDS = [
+  {en:"above-mentioned", fr:"mentionné ci-dessus"},
+  {en:"activate", fr:"déclencher (un mécanisme)", note:"N"},
+  {en:"adapter", fr:"adaptateur"},
+  {en:"advanced, leading edge", fr:"de pointe, avancé", note:"Adj."},
+  {en:"alteration", fr:"modification, modifier"},
+  {en:"anticipation / roughly", fr:"Nom : anticiper, prévoir / approximativement"},
+  {en:"attempt", fr:"essai, tenter de / dans le but de"},
+  {en:"autonomous", fr:"autonome, autonomie"},
+  {en:"average", fr:"moyenne, moyen, en moyenne", note:"N/Adj./Ving"},
+  {en:"avoid + N / Ving", fr:"éviter qqch / éviter de faire qqch"},
+  {en:"bargain", fr:"bonne affaire"},
+  {en:"batch production", fr:"production par lot ≠ p. continue, qui fonctionne sur piles"},
+  {en:"battery-operated", fr:"qui fonctionne sur piles"},
+  {en:"blade", fr:"pale, lame, hélice"},
+  {en:"blame s.o. for sthg", fr:"reprocher qqch à qqn"},
+  {en:"blend", fr:"mélange, mélanger, mixeur"},
+  {en:"break the law", fr:"enfreindre la loi"},
+  {en:"break down into", fr:"se décomposer en, subdivide into"},
+  {en:"build up", fr:"s'accumuler, accumulation"},
+  {en:"calibration", fr:"étalonnage, étalonner"},
+  {en:"cap", fr:"bouchon, couvercle"},
+  {en:"cardboard", fr:"du carton (matériau) ≠ un carton"},
+  {en:"cash", fr:"comptant, payer comptant"},
+  {en:"check-up", fr:"vérification, vérifier, v. à 100%"},
+  {en:"coincide with", fr:"coïncider avec, coïncidence"},
+  {en:"compete with", fr:"concurrencer, concurrent"},
+  {en:"comply with regulations", fr:"respecter la réglementation"},
+  {en:"connection", fr:"relier, connexion, contact"},
+  {en:"consist in Ving", fr:"consister à + Verbe infinitif"},
+  {en:"content(s)", fr:"contenu, contenir"},
+  {en:"contract of sale", fr:"contrat de vente, conditions de v."},
+  {en:"conveyor-belt", fr:"tapis roulant, convoyer"},
+  {en:"conviction", fr:"conviction, convaincre"},
+  {en:"cool down", fr:"frais, refroidir"},
+  {en:"copy (duplicate)", fr:"exemplaire (copie), imiter"},
+  {en:"copy-cat", fr:"copie conforme, imitation, clone"},
+  {en:"damage", fr:"dégâts, dommages et intérêts", note:"V"},
+  {en:"deadline", fr:"date limite, respecter l'échéance"},
+  {en:"debug", fr:"ôter erreurs de programme, virus"},
+  {en:"demand", fr:"l'offre et la demande (consom.)", note:"supply & demand"},
+  {en:"design", fr:"conception, concevoir"},
+  {en:"digital", fr:"numérique ≠ analogique", note:"≠ analogue"},
+  {en:"diversification", fr:"diversification, diversifier"},
+  {en:"download", fr:"télécharger (informatique)"},
+  {en:"drop", fr:"goutte, gouttelette"},
+  {en:"emit", fr:"émettre, transmettre, capter (signal)", note:"transmit, pick up"},
+  {en:"estimate", fr:"estimer, devis", note:"cost estimate"},
+  {en:"file", fr:"fichier, classer (fichier ≠ catégorie)", note:"to file = to classify"},
+  {en:"fill", fr:"remplir, remplir 100% plein", note:"fill up - full"},
+  {en:"final", fr:"définitif, finaliser, mettre au point"},
+  {en:"fit", fr:"installer, être équipé de", note:"to be fitted with"},
+  {en:"flask", fr:"flacon, récipient, conteneur", note:"container"},
+  {en:"flowchart", fr:"schéma de procédé, graphique"},
+  {en:"focus", fr:"mise au point, mettre au point"},
+  {en:"freeware", fr:"(logiciels) gratuitiels, partagiciels", note:"shareware"},
+  {en:"fuel", fr:"combustible(s), alimenter en c."},
+  {en:"gather", fr:"rassembler", note:"to gather = to collect"},
+  {en:"glue", fr:"colle, coller, copier-coller (info)", note:"to glue = copy & paste"},
+  {en:"guarantee", fr:"garantie", note:"≠ guaranty"},
+  {en:"guidelines", fr:"repères, lignes directrices, aperçu", note:"outline"},
+  {en:"hammer-ladder", fr:"marteau, échelle"},
+  {en:"heat", fr:"chaleur, chauffer, chauffage, chaud", note:"beat up - heating - hot"},
+  {en:"hold-up", fr:"retarder, bloquer", note:"Nom"},
+  {en:"implementation of a policy", fr:"mise en œuvre d'une politique"},
+  {en:"involved in", fr:"entraver, contrarier, interférer avec", note:"interfere with"},
+  {en:"isolate", fr:"être impliqué dans"},
+  {en:"item", fr:"isoler (seul) ≠ faire isolation"},
+  {en:"joint venture", fr:"élément, kit, équipement, ensemble / projet en commun"},
+  {en:"lift", fr:"soulever, lever (+ complément)", note:"(to) + N = to raise + Noun"},
+  {en:"link", fr:"lien, liaison, relier à, boucle", note:"to link with - loop"},
+  {en:"literature-descriptive", fr:"de la documentation, doc. détaillée"},
+  {en:"log in data", fr:"entrer les données", note:"enter data"},
+  {en:"log on to the Internet", fr:"se connecter sur Internet"},
+  {en:"machine-tool", fr:"machine-outil, les machines", note:"to connect to"},
+  {en:"made up of (to be)", fr:"être composé de (parties) ≠ fait de", note:"≠ made of"},
+  {en:"mail-order firm", fr:"société de vente par correspondance"},
+  {en:"mainframe computer", fr:"ordinateur central"},
+  {en:"margin", fr:"marge, marge bénéficiaire", note:"profit margin"},
+  {en:"market", fr:"marché, créneau porteur", note:"market niche"},
+  {en:"mill", fr:"moulin (usine), broyer, moudre", note:"to mill = to crush"},
+  {en:"mix", fr:"mélanger, mélange"},
+  {en:"mobile", fr:"portable, nomade (Adj.), antenne téléphonique", note:"telephone mast"},
+  {en:"molecule", fr:"molécule, particule"},
+  {en:"nucleus", fr:"noyau", note:"pl. nuclei"},
+  {en:"occur", fr:"se produire, survenir", note:"Nom = occurrence"},
+  {en:"on-line", fr:"en ligne, message de guidage", note:"prompt (for P.C.s)"},
+  {en:"out of order", fr:"en panne ≠ en état de marche", note:"≠ in working order"},
+  {en:"overalls", fr:"combinaison de travail, blouse", note:"labcoat"},
+  {en:"overflow", fr:"débordement, déborder"},
+  {en:"patent", fr:"brevet, breveté", note:"or - patented"},
+  {en:"pour", fr:"verser (≠ pauvre)", note:"(≠ poor)"},
+  {en:"press", fr:"presser, pression"},
+  {en:"process", fr:"procédé, process ≠ mode opératoire"},
+  {en:"promotion/ting", fr:"Nom/Action : promouvoir, inciter", note:"to promote"},
+  {en:"prospective customer", fr:"client potentiel"},
+  {en:"provider", fr:"fournisseur, prestataire d'accès, de s.", note:"access p., service p."},
+  {en:"purpose", fr:"polyvalent, fait spécialement", note:"multi-p., all-p., p.-built"},
+  {en:"raw", fr:"brut, non raffiné, non transformé", note:"ex.: raw material"},
+  {en:"reduction", fr:"réduction, réduire"},
+  {en:"refer to something", fr:"se référer à, faire référence à qqch"},
+  {en:"relay", fr:"un relais", note:"to relay"},
+  {en:"release", fr:"relâcher, libérer", note:"Nom (sortie)"},
+  {en:"remote", fr:"loin, commande à distance", note:"remote control"},
+  {en:"remove", fr:"ôter, retirer, retrait"},
+  {en:"response", fr:"action, réaction", note:"to respond"},
+  {en:"retail at", fr:"se vendre à + prix, point de vente", note:"retail outlet"},
+  {en:"retrieve", fr:"récupérer", note:"to collect, recover"},
+  {en:"retrofitted", fr:"installé après-coup", note:"Verbe = to retrofit"},
+  {en:"rotation", fr:"tour, tourner"},
+  {en:"running cost", fr:"coût de fonctionnement", note:"run = operate"},
+  {en:"sample", fr:"échantillon, faire/prendre éch."},
+  {en:"satellite dish", fr:"parabole (T.V.)"},
+  {en:"scanner", fr:"scanner, balayer"},
+  {en:"screw", fr:"vis, visser, tournevis", note:"screw - screwdriver"},
+  {en:"secured payment", fr:"paiement sécurisé (Internet)"},
+  {en:"service", fr:"entretenir (machine, matériel)", note:"to maintain"},
+  {en:"smart", fr:"intelligent (info), carte à mémoire", note:"smart card"},
+  {en:"software package", fr:"ensemble de logiciels"},
+  {en:"spanner", fr:"clé (outil), clé à molette", note:"wrench"},
+  {en:"stand", fr:"pied, support, être debout"},
+  {en:"stir", fr:"remuer, éprouvette, tube à essai", note:"test-tube"},
+  {en:"storage", fr:"stockage, espace pour stocker", note:"storage space"},
+  {en:"store", fr:"stocker, un stock", note:"(to) = to stock - a stock"},
+  {en:"survey", fr:"étude, étude de marché", note:"market survey"},
+  {en:"switch on", fr:"allumer ≠ éteindre (appareil électrique)", note:"(to) ≠ to switch off"},
+  {en:"telescopic", fr:"télescopique, extensible", note:"expandable"},
+  {en:"temperature", fr:"température"},
+  {en:"tentative", fr:"provisoire, des stat. provisoires", note:"t. statistics"},
+  {en:"tighten", fr:"serrer ≠ desserrer", note:"(to) ≠ to loosen"},
+  {en:"trouble-shooting", fr:"dépannage, recherche de panne"},
+  {en:"the last/past/next three years", fr:"les 3 ans passés / à venir (ordre mots)"},
+  {en:"versatile", fr:"polyvalent, D.V.D.", note:"Digital V. Disk"},
+  {en:"voltage", fr:"voltage, haute/basse tension", note:"high/low v."},
+  {en:"wave", fr:"onde, four à micro-ondes", note:"microwave oven"},
+  {en:"weak", fr:"faible, affaiblir"},
+  {en:"wear & tear", fr:"usure, user", note:"to wear out"},
+  {en:"wind", fr:"vent, éolienne, venté", note:"windmill - windy"},
+  {en:"yield", fr:"rendement, produire (rendement)"},
+];
+
+// ─── STATE ────────────────────────────────────────────────────────
+let deck = [];
+let current = 0;
+let good = 0, bad = 0;
+let wrong = [];
+let mode = 'flash';
+let flipped = false;
+let qcmAnswered = false;
+
+// touch/swipe
+let touchStartX = 0, touchStartY = 0;
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.mode-btn').forEach((b,i) => {
+    b.classList.toggle('active', ['flash','qcm','hard'][i] === m);
+  });
+  if (m === 'hard') {
+    if (wrong.length === 0) { alert("Pas encore de mots ratés !"); return; }
+    deck = shuffle([...wrong]);
+    wrong = [];
+    current = 0; good = 0; bad = 0;
+    updateStats();
+    document.getElementById('end-screen').classList.remove('show');
+    document.getElementById('main-content').style.display = '';
+  } else {
+    restart(false);
+  }
+  showCard();
+}
+
+function restart(onlyWrong) {
+  if (onlyWrong && wrong.length > 0) {
+    deck = shuffle([...wrong]);
+  } else {
+    deck = shuffle([...ALL_WORDS]);
+  }
+  wrong = [];
+  current = 0; good = 0; bad = 0;
+  flipped = false;
+  qcmAnswered = false;
+  document.getElementById('end-screen').classList.remove('show');
+  document.getElementById('main-content').style.display = '';
+  updateStats();
+  showCard();
+}
+
+function showCard() {
+  if (current >= deck.length) { showEnd(); return; }
+  const w = deck[current];
+  updateProgress();
+
+  if (mode === 'qcm') {
+    document.getElementById('card-area').style.display = 'none';
+    document.getElementById('flash-controls').style.display = 'none';
+    document.getElementById('qcm-area').style.display = 'block';
+    showQCM(w);
+  } else {
+    document.getElementById('card-area').style.display = 'block';
+    document.getElementById('flash-controls').style.display = 'flex';
+    document.getElementById('qcm-area').style.display = 'none';
+    document.getElementById('word-en').textContent = w.en;
+    document.getElementById('word-fr').textContent = w.fr;
+    document.getElementById('word-note').textContent = w.note || '';
+    const card = document.getElementById('card');
+    card.classList.remove('flipped');
+    flipped = false;
+  }
+}
+
+function flipCard() {
+  const card = document.getElementById('card');
+  flipped = !flipped;
+  card.classList.toggle('flipped', flipped);
+}
+
+function answer(knew) {
+  if (knew) good++; else { bad++; wrong.push(deck[current]); }
+  updateStats();
+  current++;
+  flipped = false;
+  showCard();
+}
+
+function nextCard() {
+  wrong.push(deck[current]);
+  current++;
+  flipped = false;
+  showCard();
+}
+
+function updateProgress() {
+  const total = deck.length;
+  const pct = total ? Math.round((current / total) * 100) : 0;
+  document.getElementById('prog-text').textContent = `${current + 1} / ${total}`;
+  document.getElementById('prog-pct').textContent = `${pct}%`;
+  document.getElementById('prog-fill').style.width = pct + '%';
+}
+
+function updateStats() {
+  document.getElementById('stat-good').textContent = good;
+  document.getElementById('stat-bad').textContent = bad;
+  document.getElementById('stat-left').textContent = deck.length - current;
+}
+
+// ─── QCM ────────────────────────────────────────────────────────
+function showQCM(w) {
+  document.getElementById('qcm-word').textContent = w.en;
+  qcmAnswered = false;
+
+  // Pick 3 wrong options
+  const others = ALL_WORDS.filter(x => x.en !== w.en);
+  shuffle(others);
+  const choices = shuffle([w, ...others.slice(0, 3)]);
+
+  const container = document.getElementById('qcm-options');
+  container.innerHTML = '';
+  choices.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'qcm-opt';
+    btn.textContent = c.fr;
+    btn.onclick = () => handleQCM(btn, c, w);
+    container.appendChild(btn);
+  });
+}
+
+function handleQCM(btn, chosen, correct) {
+  if (qcmAnswered) return;
+  qcmAnswered = true;
+  const btns = document.querySelectorAll('.qcm-opt');
+  btns.forEach(b => { b.disabled = true; });
+
+  if (chosen.en === correct.en) {
+    btn.classList.add('correct');
+    good++;
+  } else {
+    btn.classList.add('wrong');
+    bad++;
+    wrong.push(correct);
+    btns.forEach(b => { if (b.textContent === correct.fr) b.classList.add('reveal'); });
+  }
+  updateStats();
+  setTimeout(() => { current++; showCard(); }, 1000);
+}
+
+// ─── END SCREEN ────────────────────────────────────────────────
+function showEnd() {
+  document.getElementById('main-content').style.display = 'none';
+  const screen = document.getElementById('end-screen');
+  screen.classList.add('show');
+  const total = good + bad;
+  const pct = total ? Math.round((good / total) * 100) : 0;
+  document.getElementById('end-score').textContent = pct + '%';
+  document.getElementById('end-sub').textContent = `${good} su · ${bad} raté sur ${total}`;
+  const emojis = pct >= 90 ? '🏆' : pct >= 70 ? '🎉' : pct >= 50 ? '💪' : '📚';
+  document.getElementById('end-emoji').textContent = emojis;
+
+  const btnRetry = document.getElementById('btn-retry-wrong');
+  btnRetry.style.display = wrong.length > 0 ? 'block' : 'none';
+  btnRetry.textContent = `↺ Revoir les ${wrong.length} ratés`;
+}
+
+// ─── SWIPE ────────────────────────────────────────────────────────
+const cardArea = document.getElementById('card-area');
+
+cardArea.addEventListener('touchstart', e => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+cardArea.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  if (Math.abs(dx) < 40 || Math.abs(dy) > Math.abs(dx)) return;
+
+  if (!flipped) { flipCard(); return; }
+
+  const fbLeft = document.getElementById('fb-left');
+  const fbRight = document.getElementById('fb-right');
+
+  if (dx < -40) {
+    fbLeft.classList.add('show');
+    setTimeout(() => { fbLeft.classList.remove('show'); answer(false); }, 400);
+  } else if (dx > 40) {
+    fbRight.classList.add('show');
+    setTimeout(() => { fbRight.classList.remove('show'); answer(true); }, 400);
+  }
+}, { passive: true });
+
+// ─── KEYBOARD ─────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (mode !== 'flash') return;
+  if (e.key === ' ') { e.preventDefault(); flipCard(); }
+  if (e.key === 'ArrowRight') answer(true);
+  if (e.key === 'ArrowLeft') answer(false);
+  if (e.key === 'ArrowDown') nextCard();
+});
+
+// ─── INIT ────────────────────────────────────────────────────────
+restart(false);
+</script>
+</body>
+</html>
